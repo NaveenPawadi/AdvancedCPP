@@ -1,0 +1,3 @@
+D:/training/AdvancedC++24/Handson/ModernC++/cmake-build-debug/CMakeFiles/ModernC__.dir
+D:/training/AdvancedC++24/Handson/ModernC++/cmake-build-debug/CMakeFiles/edit_cache.dir
+D:/training/AdvancedC++24/Handson/ModernC++/cmake-build-debug/CMakeFiles/rebuild_cache.dir

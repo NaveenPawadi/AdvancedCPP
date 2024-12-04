@@ -1,0 +1,447 @@
+C++98-2003 standards with regard to CLASS TEMPLATES:-
+
+Template or generic programming also known as meta-programming, is useful language feature when it comes to solving problems of the kind, where the business-logic remains the same ir-respective of the data-type.
+
+METAPROGRAMMING: Writing code to generate code.
+
+The class template feature(s), falls under the COMPILE-TIME POLYMORPHISM category.
+
+class CA
+{
+private:
+  int a,b;  // No freedom to the class consumer to decide the data types of these members.
+  
+};
+
+As a consumer of the above class, it is upto us as to how many instances we wish to define, but the data types of all the data members in the each of the object would be of type 'int'
+
+int main()
+{
+  CA ob1, ob2, ob3..;
+}
+
+Now, with the generic programming or template programming, we can re-factor the above class is such a way, that the consumer would be given the privileges of deciding the data types of the data members for the object constructed or created by them.
+
+So, the data members of the class should be type-neutral. In order to achieve the same we think of assuming an algebraic name for the data members.
+
+template<typename T> class CA  // A generic class (or) a class template
+{
+private:
+  T a,b;   // the data members are of some unknown data type 'T', the consumer would decide their types.
+};
+
+//A generic class consumer.
+CA ob1; //Error
+//Consumer decides the type
+CA<int> ob1; //ok  -->   int a,b;
+
+CA<float> ob2; //ok -->  float a,b;
+
+For the above generic class, providing the data types in the angled brackets by the consumer is compulsory.
+
+As an author of a class template, we can provide certain flexibilities to the class consumer, like what ?
+  - The consumer can decide the data types of the data members (or)
+  - Leave it to the compiler to decide the data-type.
+
+template<typename T=double> class CA  // A generic class (or) a class template with default type
+{
+private:
+  T a,b;   // the data members are of some unknown data type 'T', the consumer would decide their types.
+};
+
+//Consumer decides the type
+CA<int> ob1; //ok  -->   int a,b;
+
+CA<float> ob2; //ok -->  float a,b;
+
+CA<> ob3;    //ok  ---> CA<double> ob3;  ---> double a,b;
+
+Note: Stating the empty angled brackets '<>' is mandatory till C++14 standards..
+
+Now in C++17 when the compiler is forced to assumed the default type by the class consumer, stating '<>' the empty brackets is now not necessary.
+
+//C++17
+
+CA ob3;   // ===> CA<double> ob3;
+----------------------------------------------------------------------------
+                      A primary class template  [can be]
+                           |
+                     |--------------|
+                     |              |
+                 partial            Full specialization
+                 specialization
+
+
+template<typename T> class CA    //Primary class template           --------> 1
+{
+private:  
+  T a,b;
+public:
+   void print(){ cout << a << b; }
+};
+
+template<typename T> class CA<T*>  //partial specialization         ------> 2
+{
+  // Partially generic 'T'
+  // Partially type specific, i.e. support for pointer types.
+  T* a,b;
+public:
+   void print(){ cout << *a << *b; }
+};
+
+template<> class CA<char>          // full specialization           -----> 3
+{
+  //..
+};
+
+Note: All the above 3 classes are independent of each other, 
+  - There is no rule that their data members or member functions should have same name and business-logic.
+  
+  Just by virtue of specialization, they take the same class name across.
+
+
+//CONSUMER CODE
+
+CA<int> ob1;     // ---- 1
+CA<float ob2;    // ---- 1
+
+CA<int*> ob3;    // ----- 2
+
+CA<char> ob4;    // ----- 3
+
+-------------------------------------------------------------------------------
+The syntax for defining member functions of a generic class, outside the class scope.
+
+Non-generic class
+
+class CA
+{
+private:
+  int a,b;
+public:
+  CA(int);
+  CA(int, int);
+  ~CA();
+  void Sum();
+};
+
+CA::CA(int x):a(x),b(x)
+{ }
+CA::CA(int x, int y):a(x),b(y)
+{ }
+
+CA::~CA()
+{ }
+
+void CA::Sum()
+{ }
+
+----------------------------
+If the class is generic, then ?
+
+template<typename T> class CA
+{
+private:
+  T a,b;
+public:
+  CA(T);
+  CA(T, T);
+  ~CA();
+  void Sum();
+};
+
+template<typename T> CA<T>::CA(T x):a(x),b(x)
+{ }
+
+template<typename T> CA<T>::CA(T x, T y):a(x),b(y)
+{ }
+
+template<typename T> CA<T>::~CA()
+{ }
+
+template<typename T> void CA<T>::Sum()
+{ }
+
+--------------------------------------------------------------
+
+The names that we use to distinguish one datatype from another, like..
+  - int, float, double etc
+are called - REFINED NAMES.
+
+The compiler internally uses an alternate set of names or symbols to distinguish the various standard datatype, they are...
+
+  i   --> for int
+  f   --> for float
+  d   --> for double
+  v   --> for void
+  c   --> for char etc...  These names are called RAW NAMES.
+----------------------------------------------------------------------------------
+For the instance 'ob1' it needs a two arg constructor of the form
+
+CA(int, int);
+
+CA(T, T);  //Considers this generic method and carries out an instantiation process.
+
+This instantiated or type-specific code generated by the compiler while compiling, is what will get into the binary file and the generic method 'CA(T, T)'.
+
+The foll: 3 methods for 'int' data type i.e CA<int> ob1(10,20);
+
+CA<int>::CA(int x, int y)
+{ }
+
+void CA<int>::Sum()
+{ }
+
+~CA<int>::CA()
+{ }
+---------------------   
+ CA<float> ob2(10.34f,20.21f);
+
+CA<float>::CA(float x, float y)
+{ }
+
+void CA<float>::Sum()
+{ }
+
+CA<float>::~CA()
+{ }
+-------------------------------------------------
+
+template<typename T1, typename T2, typename T3> class CA
+{
+private:
+  T1 ob1;
+  T2 ob2;
+  T3 ob3;
+public:
+    void fun();
+};
+
+template<typename T1, typename T2, typename T3> void CA<T1,T2,T3>::fun()
+{ }
+
+
+----------------------------------
+Library vendor:-
+
+class flute
+{
+public:
+  void play(){...}
+};
+
+class drums
+{
+public:
+  void play(){...}
+};
+
+class piano
+{
+public:
+  void play(){...}
+};
+
+A generic wrapper class, that facilitates or assists in strategizing during compile-time for the generic class consumer, based on the above non-generic (instrument classes) classes.
+
+template<typename T1, typename T2, typename T3> class compose
+{
+private:
+  T1 ob1;
+  T2 ob2;
+  T3 ob3;
+public:
+    void compose_music();
+};
+
+template<typename T1, typename T2, typename T3> void CA<T1,T2,T3>::compose_music()
+{
+  ob1.play();
+  ob2.play();
+  ob3.play();
+}
+
+----------------------------------
+Non type template parameters in a class template:-
+
+  A non-type template parameter in class template typename declaration acts as a COMPILE-TIME constant.
+  
+
+template<typename T> class CA
+{
+private:
+  T arr[10];
+public:
+  //..
+};
+
+//consumers
+CA<int> ob1;   //---> int arr[10]
+
+CA<float> ob2; // ---> float arr[10]
+
+----------------
+A class template with non-type parameter support provides flexibility or choice with regard to the 
+size of the array apart from the datatype.
+
+template<typename T, size_t SIZE>  class CA          // SIZE is the un-named type
+{
+private:
+  T arr[SIZE];
+};
+
+//consumers
+CA<int, 20> ob1;   // int arr[20]
+
+CA<float, 5> ob2;  // float arr[5];
+---------------------------------------------
+Standard Template Library:-
+
+- Borrows class template feature in C++
+- Borrows operator overloading in C++
+- Borrows conversion functions in C++
+Also adopts certain design mechanisms...
+  - PIMPL model [Pointer implementation model]
+  - RAII technique [Resource acquisition is initialization]
+  - Smartpointer technique
+
+
+1) container classes
+  - These classes that exhibit HAS-A relationship (PIMPL model) help us contain or hold values of the desired type in a specific mathematical model....
+  
+    - stack, queue, list, vector
+    - map, pair, multimap etc...  [KEY-VALUE RELATIONSHIP]
+    
+2) iterator classes
+  - Are classes whose objects would act like pointers to the values contained in a container class instance.
+  
+3) allocator class
+  - Are the classes which the container class instances use, to manage heap memory for the values getting populated onto them.
+  
+4) algorithms:
+  These are global utility functions, that can help us solve some custom business on the values held in a container class object.
+  
+template<typename T1, typename T2 = Allocator<T1>> class list
+{
+T1 data;
+T2 mem_obj;
+
+};  
+
+
+-------------------------------------------
+class CA
+{ 
+public:
+  CA(){cout <<"CA default constructor" << endl;}
+  ~CA(){cout <<"CA destructor" << endl; }
+};
+class CB
+{ 
+public:
+  CB(){cout <<"CB default constructor" << endl;}
+  ~CB(){cout <<"CB destructor" << endl; }
+};
+//..
+
+template<typename T> class MemManager
+{
+private:
+  T* pointee;    // PIMPL model
+};
+
+An extension of PIMPL model is RAII
+
+template<typename T> class MemManager
+{
+private:
+  T* pointee;    // PIMPL model
+public:
+  //RAII approach
+  MemManager(T* x):pointee(x)   // We are setting (or) acquiring a resource [HEAP]
+  { }
+  ~MemManager()                 // We are releasing the same
+  {
+    if(pointee != nullptr)
+    {
+      delete pointee;
+    }
+};
+
+-----------------------------
+Type-inference mechanism:-
+
+int a;
+double b; //float b;
+float c;
+//..
+
+
+auto result1 = a+b;       // double result1=..;
+ //..
+ 
+auto result2 = b*c;       // double result2=..;
+----------------------------------------------------------------------
+list<double> ls1;
+//..
+//..
+list<CA>::iterator itr = ls1.begin();  //error
+
+//modern approach
+auto itr = ls1.begin();  //ok    ---> list<double>::iterator itr = ...
+
+-------------------------------------------------------------------
+
+for(list<int>::iterator itr = ls1.begin(); itr != ls1.end(); itr ++)
+{
+  //..
+}
+
+Modern approach - more concise
+
+for(auto itr = ls1.begin(); itr != ls1.end(); itr ++)
+{
+  //..
+}
+
+The dont's on 'auto' keyword:-
+
+  - Cannot define an a variable or an instance without being initialized.
+  auto x; //error
+  
+  auto x= 100;  //ok   int x = 100;
+  
+  - Cannot be used as formal parameters of a function.
+  
+  void fun(auto x)   //error
+  { }
+
+  - Cannot be used to declare class data members
+  
+  class CA
+  {
+    int a;
+    float b;
+    auto c;  //error
+  };
+  
+  - Cannot be used to declare or define an array type instance.
+  
+  auto arr[10]={...};  //error
+  
+-----------------------------------------------------------------
+Limitations of the 'auto' keyword:-
+
+These keywords actually ignore the extended qualifiers while inferring the data-type.
+
+const auto x = 100;     // const int x = 100;
+static auto y = 10;     // static int y = 10;
+volatile auto z = 50;  // volatile int z = 50;
+
+auto val1 = x;     // int val1 = x;    --> the 'const' qualifier is ignored
+auto val2 = y;     // int val2 = y;    --> the 'static' qualifier is ignored
+auto val3 = z;     // int val3 = z;    --> The 'volatile' qualifier is ignored.
+------------------------------------------------------------
+
+
+

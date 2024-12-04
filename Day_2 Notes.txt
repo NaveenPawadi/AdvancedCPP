@@ -1,0 +1,388 @@
+Type-inference 'auto' (continued):
+
+int func(double x){....}
+
+auto g = func;   // int(*g)(double);
+
+//call the function
+auto result = (*g)(45.12);
+
+
+auto& f = func;  
+
+//call the function
+auto result = f(45.12);
+------------------------------------------------------
+DECLTYPE:
+  Unlike 'auto', the decltype keyword is used for defining variables of desired type without the need to initialize the same. Also the extended qualifiers is not ignored like 'auto'.
+  
+auto x = 10;
+
+//Define 'b' whose type has to be whatever is 'x' type.
+decltype(x) b;   // int b;
+
+decltype(x*10.32f)  c;
+------------------------------------------
+const auto b1=200;
+
+
+auto val1 = b1;   // int val1= 200;
+
+decltype(b1) b2;  //error --> const int b2;
+decltype(b1) b2=200;  //ok, const int b2 = 200;
+----------------------------------------------------------------
+Uniform initialization syntax:-
+
+Traditional approach:-
+
+int a;  //will be garage
+int b=0;
+int c=200;
+
+CA ob1;
+CA ob2(10);
+CA ob3(30,40);
+
+Modern approach:-
+
+int a{};   //will be defaulted to zero
+int b{};   //  --- "  -----
+int c{200};
+
+CA ob1{};
+CA ob2{10};
+CA ob3{30,40};
+---------------------------------------
+CONSTEXPR: Constant expressions, applicable either for a function or an instance.
+
+When applied to an instance [a variable or an object]:-
+  Informing the compiler that this instance must and should be initialized during compile-time, if it is not possible to initialize during compile-time flag error.
+  
+
+const int a = 100;  // compile-time initialization, 
+
+We can also initialize the 'const element' during run-time if we wish.
+
+int fun()
+{
+  //...
+  return x*x;
+}
+
+A call to a function is always runtime.
+
+const int result = fun();  //ok, will compile
+****************************
+constexpr int a = 100;  //ok
+
+constexpr int result = fun();  //error, cannot be initialized during runtime.
+
+----------------------------------------------------------
+
+int fun(int x)
+{
+  //...
+  return x*x;
+}
+
+
+//approach-1
+//Input to the function is known during COMPILE-TIME
+int result1 = fun(10); //ok   -- Creation of function stack-frame [PROLOG - BUSINESS LOGIC - EPILOG]
+int a;
+cin >> a;
+
+//Input to the function is known during RUN-TIME
+int result2 = fun(a);  //ok  -- Creation of function stack-frame [PROLOG - BUSINESS LOGIC - EPILOG]
+****************************************
+
+constexpr int fun(int x)  //A constexpr function
+{
+  //...
+  return x*x;
+}
+
+
+//approach-1
+//Input to the function is known during COMPILE-TIME
+int result1 = fun(10); //ok   ===>  int result1 = 100;  [no stack-frame, no PROLOG, BUSINESS LOGIC nor EPILOG]
+int a;
+cin >> a;
+
+//Input to the function is known during RUN-TIME
+int result2 = fun(a);  //ok  -- Creation of function stack-frame [PROLOG - BUSINESS LOGIC - EPILOG]
+
+-------------------------------------
+
+constexpr int Fun1(int x)
+{
+  return x*x;
+}
+
+int result1 = Fun1(100);  //  int result1 = 1000;
+
+constexpr int result2 = Fun1(200); //ok   ==> int result2 = 2000;
+
+int arr1[Fun1(100)];   //ok ---> int arr1[1000];
+int arr2[result2];     // ok ---> int arr2[2000];
+
+int arr3[result1];  //error, not a constexpr candidate
+---------------------------------------------------------------------------
+
+
+class CA
+{
+private:
+ int a,b;
+public:
+ constexpr CA(int x, int y):a(x),b(y)
+ { }
+ 
+ constexpr int Getter(int x)
+ {
+   return x*x;
+ }
+};
+
+//consumer code
+
+CA ob1(10,20);  //The input is known during compile-time, 
+                  /*
+                      Avoids stack-frame, prolog, epilog.
+                      move 10 to this->a
+                      move 20 to this->b;
+                  */
+
+CA ob2(a,b);  //The inputs are known only during run-time, A constructor call will happen
+                 /*
+                    - create function stack-frame
+                    - execute prolog
+                        move x to this->a
+                        move y to this->b
+                    - Business logic
+                    - Epilog
+                    Unwind the stack-frame
+                 
+                 */
+---------------------------------------------------------------
+template<typename T> class MyFunction
+{
+private:
+  T* fp;
+public:
+  //..
+};
+
+//consumer code
+
+MyFunction<void()> ob1;               // ob1.fp   ===> void(*fp)();
+
+MyFunction<int(int,float)> ob2;       // ob2.fp   ===> int(*fp)(int, float);
+
+
+------------------------------------------------------------
+
+LAMBDA EXPRESSIONS:-
+  These are anonymous functions, can be scoped inside a function [global/member function] or in the global scope.
+  
+  Whenever we plan to define a lambda expression, it always starts with a pair of square-brackets...
+  
+  []()
+  {
+      //....
+  };
+
+A lambda if it has to be invoked, can be achieved in 2 different styles...
+  - Can be invoked at the point of definition itself...
+  
+  []()
+  {
+     //...
+  }();    //call here
+  
+  - The defined lamba can be assigned to a lambda handle, and then use this handle to invoke it.
+  
+  auto lm =[]()
+  {
+    //...
+  };
+
+Invoke using the lambda handle...where 'lm' is actually an object of 'function' class.
+And it calls the 'function operator' member function  
+
+  lm();    // lm.operator()();
+  
+  auto lm =[](){...};    // function<void(void)> lm =  [](){...};
+
+Whenever we plan to define lambda's, this construct does not have  a place-holder in its syntax to state it's return-type if any..., this is where we use the special modern C++ syntax called 'trailing return-type syntax'.
+
+for eg:
+
+  auto lm =[]() ->void
+  {
+    //..
+    //does not return anything...
+  };
+
+
+  auto lm1 =[]() -> int
+  {
+    int a;
+    ///...
+    return a;
+  };
+---------------------------------
+CAPTURE CLAUSE:
+The lambda body that starts with '[]' a pair of square brackets, is also known as capture clause.
+Here we state which element of the outer-scope we would like to access.
+
+void fun1()
+{
+  int a,b,c;    //outer-scope elements to the lambda expression
+  
+ auto lm= []()
+  {
+    cout << a ; //error
+    cout << b; //error
+    cout << c; //error
+  };
+  
+  auto lm = [a]()
+  {
+    cout << a ; //ok
+    cout << b; //error
+    cout << c; //error
+  };
+  
+  auto lm = [a,b]()
+  {
+    cout << a ; //ok
+    cout << b; //ok
+    cout << c; //error
+  };
+  
+  auto lm = [a,b,c]()
+  {
+    cout << a ; //ok
+    cout << b; //ok
+    cout << c; //ok
+  };
+  
+  //(or)
+  
+  auto lm = [=]()                //capture all the outer-scope elements by VALUE
+  {
+    cout << a ; //ok
+    cout << b; //ok
+    cout << c; //ok
+  };
+  
+   //(or)
+  
+  auto lm = [&]()                //capture all the outer-scope elements by REFERENCE
+  {
+    cout << a ; //ok
+    cout << b; //ok
+    cout << c; //ok
+  };
+  
+  //capture 'a' by value and all others by reference
+  auto lm = [&, a]()                
+  {
+    cout << a ; //ok - value
+    cout << b; //ok- reference
+    cout << c; //ok - reference
+  };
+  
+  //capture all by value and 'c' alone by reference
+  auto lm = [=, &c]()                
+  {
+    cout << a ; //ok - value
+    cout << b; //ok- reference
+    cout << c; //ok - reference
+  };
+}
+-----------------------------------
+CAPTURE BY REFERENCE:
+
+int a=10,b=20;   //outer-scope elements being captured by reference in a lambda function
+
+auto lm = [&]()  ->void             
+    {
+        int& lambda::a = main::a;
+        int& lambda::b = main::b;
+        //..
+    };
+
+*****************
+CAPTURE BY VALUE:
+
+int a=10,b=20;   //outer-scope elements being captured by reference in a lambda function
+
+auto lm = [=]()  ->void             
+    {
+        static const int lambda::a = main::a;  
+        //error changes not permitted on 'const' elements
+        a=a+100;
+        static const int lambda::b = main::b;  
+        //error changes not permitted on 'const' elements
+        b=b+100;
+    };
+
+If, we as developers insist on making changes to the element that has been captured by value, then use the 'mutable' qualifier in the lambda definition, by doing so the compiler will now permit changes to these elements that have been captured by VALUE.
+
+auto lm = [=]() mutable ->void             
+    {
+        static const int lambda::a = main::a;  
+        //OK changes permitted on 'const' elements as it is mutable
+        a=a+100;
+        static const int lambda::b = main::b;  
+        //OK changes permitted on 'const' elements as it is mutable
+        b=b+100;
+    };
+
+-------------------
+RECURSIVE LAMBDA:-
+  Ability of a lambda function to call itself. 
+  
+  auto lm = []()
+  {
+    //..
+    //..
+    lm(); //error, 'lm' is not captured
+  };
+  
+For recursion, the lambda handle must be visible inside the lambda scope, thereby we need to capture the same.
+
+auto lm = [&lm]()
+{
+  //...
+  //...
+  lm();  //FINE, It is visible inside the lambda as it has been captured
+};
+
+Yet, the compiler would throw an error, for the above lambda definition, why ?
+We are trying to capture a function object instance by the name 'lm', even before the compiler could infer its type in full and define it.
+
+  So, here we notice the type-inference keyword 'auto' will not be of any help. The only option is to explicitly state the lambda handle type...
+  
+  function<int(int)> lm =[&lm](int x)
+  {
+    //..
+    lm(...);
+  };
+
+--------------------------------------------------------------
+What if I want to define a lambda, whose return value should always be evaluated only during compile-time. No run-time evaluation.
+
+Make the lambda handle as 'constexpr'
+
+constexpr auto lm1 =[](int x){ return x*x; };
+
+auto result = lm1(100);  //ok
+
+int a;
+//..
+//..
+auto result = lm1(a);  //error  
+----------------------------------------------------

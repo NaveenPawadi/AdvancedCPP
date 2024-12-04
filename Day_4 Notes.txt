@@ -1,0 +1,1006 @@
+C++20 LAMBDA CAPTURE OF PARAMETER_PACK (VARIADIC)
+
+template<typename... PACK> void Fun(PACK... Args)
+{
+  /*
+    In C++11, 14 and 17 standards, it was not possible
+    to capture the outer-scope variadic element 'Args...'
+    in the lambda function.
+  */
+   //Error
+  auto lambda =[Args...]()
+  {
+    //..
+  };
+  
+  //But, now in C++20 we can
+  auto lambda =[Args...]()
+  {
+    //..
+  };
+}
+-----------------------------------------------
+
+typedef void(*FP)(int, int);
+
+void Callback(FP fp)
+{
+  //..
+  //..
+}
+ 
+As a consumer - one has to ensure the input is appropriate, a function address other than the said form will not be acceptable.
+
+void Add(int x, int y)
+{ }
+
+void Fun(int x){ }
+
+Callback(&Add); //ok - the input is appropriate type
+
+Callback(&Fun); //error, the input is not appropriate type
+
+But, now in modern C++11, we can design a function that can or is capable of accepting the addresses of functions of any form and any number of parameters, using variadic function templates.
+
+---------------------------------------------------------------
+//Generic class
+
+template<typename T> class CA   //primary template
+{
+  //...
+};
+
+//The above generic class can also be specialized...
+template<typename T> class CA<T*>   //partial specialization
+{
+  //..
+};
+
+template<> class CA<char>   //full specialization
+{
+//...
+};    
+---------------------------------
+template<typename T> class CA {  };
+
+//The specialized class for 'char', shall also derive from the primary template class
+template<typename T> class CA<char> :public CA<T>
+{ };
+--------------------------------------------------------------
+template<typename... PACK> class CA
+{
+    //A variadic class template
+};    
+
+(or)
+
+template<typename T, typename... PACK> class CA
+{
+   //A variadic class template
+};    
+------------------------------------------------
+//A variadic generic class that facilitates in realizing multi-level inheritance while instantiation.
+
+template<typename... PARAMETER_PACK> class CA
+{
+public:
+    CA(){cout <<"Base class CA" << endl;}
+};
+
+//specialized class cum derived
+template<typename PARAMETER_TYPE, typename ... PARAMETER_PACK> 
+                     class CA<PARAMETER_TYPE, PARAMETER_PACK...> : private CA<PARAMETER_PACK...>
+{
+private:
+	PARAMETER_TYPE data;
+public:
+
+	CA(PARAMETER_TYPE h, PARAMETER_PACK ...args) :CA<PARAMETER_PACK... >(args...), data(h)
+	{
+		cout << "No. of elements left further ..." << sizeof...(args) << endl;
+		cout << "data " << data << endl;
+	}
+};
+***************
+Consumer code, that consumes the above variadic class template.
+
+CA<int, float, int, char> obj1(10, 12.34f, 56, 'c');
+
+The variadic class template instantiation for the object defined above would be as follows:
+
+class CA<>
+{
+  //..
+};
+class CA<char>:private CA<>
+{ 
+private:
+  char data;
+public:
+   CA(char h, []):CA<>(),data('c')
+   { }
+};
+
+class CA<int>:private CA<char>
+{ 
+private:
+  int data;
+public:
+   CA(int h, ['c']):CA<char>('c'),data(56)
+   { }
+};
+
+class CA<float>:private CA<int>
+{ 
+private:
+  float data;
+public:
+   CA(float h, [56,'c']):CA<int>(56,'c'),data(12.34)
+   { }
+};
+
+class CA<int>:private CA<float>
+{ 
+private:
+  int data;
+public:
+   CA(int h, [12.34,56,'c']):CA<float>(12.34,56,'c'),data(10)
+   { }
+};       
+-------------------------------------------------------------
+A variadic class template would be useful when we want to achieve compile-time strategy.
+
+  If the classes that is being consumed for achieving compile-time strategy comes from the same vendor,i.e all member functions across the different classes are same by name and signature, then
+    - Design the variadic class for MULTI-LEVEL inheritance.
+    for eg:
+      template<typename...PARAMETER_PACK> class CA
+      {      };
+
+      template<typename PARAMETER_TYPE, typename... PARAMETER_PACK> 
+          class CA<PARAMETER_TYPE,PARAMETER_PACK...>:private CA<PARAMETER_PACK...>
+          {
+          
+          };
+
+  ------------
+  If the classes that is being consumed for achieving compile-time strategy comes from different vendors, i.e. the member functions across the different classes have different names or signatures..., then
+    - Design the variadic class for MULTIPLE-INHERITANCE.
+    
+    For eg:
+    
+    template<typename... PARAMETER_PACK> class CA:public PARAMETER_PACK...
+    {
+    };
+
+**********************************************************************************
+template<typename...INSTRUMENT_TYPES> class Compose
+{
+public:
+	void play_music() { cout <<"completed...." << endl;}
+};
+
+template<typename INSTRUMENT, typename ... INSTRUMENT_TYPES> 
+           class Compose<INSTRUMENT, INSTRUMENT_TYPES...> : private Compose<INSTRUMENT_TYPES...>
+{
+private:
+	INSTRUMENT object;
+public:
+	void play_music()
+	{
+		object.play();
+		Compose<INSTRUMENT_TYPES...>::play_music();    //Compose<>::play_music();
+	}
+};
+
+Compose<Drums, Piano, Flute, Guitar> music4;
+
+The instantiation of the above variadic class template for the instance 'music4' above is as follows:
+
+class Compose<>
+{
+private:
+  
+public:
+  void play_music() { cout <<"completed...." << endl;}
+};
+
+class Compose<Guitar>:private Compose<>
+{
+private:
+  Guitar object;
+public:
+  void play_music()
+  {
+    object.play();
+    Compose<>::play_music();
+  }  
+};
+
+class Compose<Flute>:private Compose<Guitar>
+{
+private:
+  Flute object;
+public:
+  void play_music()
+  {
+    object.play();
+    Compose<Guitar>::play_music();
+  }  
+};
+
+class Compose<Piano>:private Compose<Flute>
+{
+private:
+  Piano object;
+public:
+  void play_music()
+  {
+    object.play();
+    Compose<Flute,Guitar>::play_music();
+  }  
+};
+
+class Compose<Drums>:private Compose<Piano>
+{
+private:
+  Drums object;
+public:
+  void play_music()
+  {
+    object.play();
+    Compose<Piano,Flute,Guitar>::play_music();
+  }  
+};
+*********************************************************************
+A variadic class template for multiple-inheritance.
+
+template<typename... Policy> class Music :public Policy...  //Derive from the parameter pack
+{   };
+
+Music<Flute, Drums,Piano> obj1; [instantiation for this object]
+
+class Music:public Flute, public Drums,public Piano
+{  };
+--------------------------
+Music<Flute> obj2;  [instantiation for this object]
+
+class Music:public Flute
+{  };
+---------------------------------
+Music<Guitar, Drums,Violin> obj3;  [instantiation for this object]
+
+class Music:public Guitar, public Drums,public Violin
+{  };
+------------------------------------------------------
+-----------------------------------------
+IN-CLASS INITIALIZERS FOR NON-STATIC DATA MEMBERS:-
+
+  In a traditional C++ code, while declaring data members in a class, there was no support for providing any default values for the same. Doing so it would flag error. For eg:
+  
+  class CA
+  {
+    private:
+      int a =10;          //error
+      float b= 45.12f;  //error
+  };
+  
+On the contrary, now with in-class initializer feature in modern C++, we can achieve the same, where-in we can provide default values for each of the non-static data members, this value can be either a literal or an expression or a function call.
+
+It is just a syntactic sugar to explicitly avoid or define a default constructor by the class author. 
+
+The memory for data members do get defined only upon an object construction, this syntax is a message to the compiler to initialize the data members with the stated values in the class declaration by defining its own default constructor.  
+
+class CA
+  {
+    private:
+      int a =10;          //ok, in modern C++
+      float b= 45.12f;  //ok, modern c++
+  };
+
+
+           Traditional C++ code                                  Modern C++ code
+     
+     class CA                                              class CA
+     {                                                     {
+       private:                                              private:
+         int a;                                                   int a = 10;
+         float b;                                                 float b = 45.12f;
+         float c;                                                 float c = a*b;
+       public:                                                public:
+          CA():a(10),b(45.12f),c(a*b)                             //no explicit def. constructor necessary
+          { }                                                     //compiler would assume on our behalf.
+     };                                                     };  
+          
+----------------------------------------------------------------
+DELEGATING CONSTRUCTORS:-
+            A provision by which a class constructor can be called in the initializion_list of the same class constructor.
+            
+    In traditional C++, it was not possible to delegate constructors, such attempts would throw an error. For eg:
+    
+    class CA
+    {
+    public:
+      CA():CA(1,2)              //ERROR, not supported in traditional C++
+      {}
+      CA(int x)
+      { }
+      CA(int x, int y)
+      {  }
+    };
+        
+        
+    CA obj1; 
+---------------------------------------------
+DEFAULT METHODS:-
+          The 'default' keyword is applicable to the foll: compiler generated methods 
+          1) Default constructor
+          2) Copy constructor
+          3) Assignment function.
+         
+
+In traditional C++ class, if none of the above methods are defined, it is generally assumed compiler would generate one.
+      A default constructor when ?
+        - A default constructor would be assumed under the foll: scenarios
+        Traditional C++
+          a) Virtual inheritance model
+          b) A base has a default constructor, derived does not have any - then the compiler will assume one
+             for the derived class.
+          c) A class contains a data member, which is an object of another class having a default constructor, then
+             the compiler would assume one for the container class.
+          d) If the class is POLYMORPHIC by nature i.e. having OVER-RIDING and OVER-RIDABLE methods.
+       Modern C++
+          e) If the class is using in-class initializer feature, and no default constructor is defined, then
+             the compiler will assume one.
+              **************
+       A copy constructor when ?
+        If the class is not provided with any copy constructor, and the class consumer happens to copy construct
+        objects of such a class, then the compiler is expected to generate a COPY CONSTRUCTOR.
+       
+       An Assignment function when ?
+         If the class it not provided with an assignment function, and the class consumer happends to assign one or
+         objects, then the compiler would assume one.
+         
+NOTE: If the above stated contexts do not apply for a class, then compiler will not assume any of the above stated methods.         
+*******************
+The default method in modern C++ world supports 2 things...
+  a) States the intentions of the class author that they plan to depend upon the compiler synthesized methods and they don't plan to define anything of their own.
+     In Traditional C++ class, if these methods are defined it is blindly assumed by the class consumer that the compiler will generate one.
+     
+      Where as now in modern C++, we as class authors can make our intentions very clear to the class consumer, that we plan to depend upon the compiler generated one. for eg:
+      
+      class CA
+      {
+      public:
+        CA() = default;
+        CA(const CA& x) = default;
+        CA& operator =(const CA& x) = default;
+      };   
+  The above class is more expressive in its intent.
+  
+ b) It also supports the programmer to have a fine grained control over these compiler generated methods.
+ 
+     We generally understand or know, that in a traditional C++ class if we don't happen to define these 
+     methods, then the compiler will assume one and these compiler assumed methods will always be under
+     'public' access-specifier of the class.
+     
+     But, now in modern C++ we as class authors can dictate or direct the compilers that they shall assume
+     or provide these methods under the access-specifier of our choice not necessarily under 'public'.
+     
+     How ?
+      Let the compiler assume a default constructor in 'public', the copy constructor and assignment function
+      in private.
+      
+     class CA
+     {
+     private:
+      CA(const CA& x)=default;
+      CA& operator =(const CA& x)=default;
+     public:
+       CA()=default;
+     };
+        
+     The above class is expressive to the class consumer, in its intent that the copy construction and 
+     assignment operation is not permitted outside the class scope, shall be allowed only inside the class
+     scope and these methods will be compiler generated ones.
+------------------------------------------
+DELETE METHODS:
+          It is just the converse of default methods, dis-able certain operations, applicable to the foll: methods or problem scenarios...
+          
+          1) default constructor
+          2) LVALUE copy constructor
+          3) RVALUE copy constructor
+          4) LVAUE assignment function
+          5) RVALUE assignment function
+          6) To dis-able the implementation of 'operator new' on certain class types
+          7) To dis-able certain conversions.
+          8) To dis-able certain template instantiations.
+
+For Eg: in the traditonal C++ world, we as class authors wished, that instances of our class should not be allowed for copy construction nor assignment operation, then the only way was to define or declare our own methods under the 'private' access-specifier of the class.
+
+class CA   //Traditional C++ class
+{
+private:
+   CA(const CA& );
+   CA& operator =(const CA& );
+public:
+    //all other methods will be defined under public
+};          
+        
+A modern approach to address the above stated problem:
+
+class CA
+{
+public:
+  CA(const CA& x) = delete;
+  CA& operator =(const CA& x) = delete;
+};        
+--------------------------------------------
+DELETE METHODS (contd...):-
+
+In a modern C++ class, if a copy constructor or assignment function are tagged 'delete', it will not be possible to copy construct or carry out an assignment operation even inside the class scope.
+
+Design a class whose heap instances shall not be permitted:-
+
+Traditional C++ design, overload the 'operator new' under the private access-specifier of that class.
+
+class CA
+{
+private:
+  //..
+  void* operator new(size_t size);
+public:
+  //...  
+};
+
+//consumer
+
+CA* p = new CA;  //error, private member is not accessible.
+****************
+Now, in modern C++ we refactor the above code, declare the method under public and dis-able the same with 'delete'
+
+class CA
+{
+private:
+  //..
+  
+public:
+  void* operator new(size_t size)=delete;
+  //...  
+};
+
+//consumer
+
+CA* p = new CA;  //error, It is a deleted function
+----------------------------------------------------------------------------
+OVERRIDE AND FINAL KEYWORDS:-
+
+  - The override keyword is applicable to member functions of a POLYMORPHIC class family.
+  - The final keyword is applicable both at class level and function level.
+
+In a traditional C++ environment it is not possible for any class author to prevent their classes being further inherited. [Modern C++ we use 'final']
+
+class CA{...};
+
+class CB:public CA   //Now the author of 'class CB' cannot prevent a class from inherting it.
+{...};  
+
+class CC:public CB
+{...};
+
+Also, there was no facility or construct available in a traditional C++ environment, to prevent any methods being over-ridden in the derived class. For eg:
+[Modern C++ we use 'final']
+class Base
+{
+public:
+  virtual void fun(){ }
+};
+
+class Derived1:public Base  //Now, what if Derived1 wants to prevent the 'fun' being over-ridden the derived class?
+{                               //It is not possible in the traditional C++ world.
+public:
+   void fun()   //OVERRIDES the Base 'fun'
+   { }
+};
+
+class Derived2:public Derived1
+{
+public:
+  void fun()   //OVERRIDES THE Derived1 'fun'
+  { }
+};
+
+What is the guarantee a derived class programmer, who attempts to override the base class virtual function(s), uses the correct or precise signature ?
+
+class Base
+{
+public:
+  virtual void fun(int x){ }
+};
+
+class Derived1:public Base  
+{                              
+public:
+   void fun(int x)   //Signature matches exactly, thereby no issues
+   { }
+};
+
+class Derived2:public Base
+{
+public:
+  void fun(float x)  //signature mis-match, does not over-ride the base class method.
+  { }
+};
+
+When a such a takes place with function signature mis-match, a Traditional C++ compiler will never issue any error or warning, rather it will smoothly compile and consider the method 'void fun(float)' as a new member function of the derived class.
+
+Hypothetically the above 'Derived2' class can be seen as follows:
+
+class Derived2:public Base
+{
+public:
+  void Base::fun(int x)
+  {  }
+  
+  void fun(float x)  //signature mis-match, considered as a new member function in Derived2 class
+  { }
+};
+----------------------------------------
+------------------------------------------------
+EXTENDED FRIEND DECLARATIONS:
+  This modern C++ class feature, provides 3 distinct advantages...
+  1) More type safe [trying to qualify a non-existent class as a friend]
+  2) Helps in using alias or typedef names to qualify it as a friend
+  3) A typename in a generic code can also make use of it in order to qualify itself as a friend to someone.
+  
+1) 
+
+//Loop holes in a traditional approach.
+class CB{ } ;
+class CC{ };
+//..
+class CD
+{
+  friend class CA;    // This statement actually boils down to two diff. constructs...
+                                a) class CA;   //acts as a forward declaration
+                                b) friend CA; // now this CA becomes friend.
+};
+  
+In the above example, the 'class CA' declaration does not precede the 'class CD' declaration, further there is no guarantee there would be 'class CA' declaration following the 'class CD' declaration.
+
+  If the 'class CA' declaration exists foll: 'class CD', then it makes sense to qualify it as a friend.
+  
+  What if 'class CA' declaration does not exist foll: 'class CD' ?
+  In traditional C++ code, it will happily compile, now there is an attempt to qualify a non-existent class a friend.
+
+But,now in modern C++ we can trap such issues... by using the extended friend declaration syntax...
+
+class CB{};
+class CC{};
+//..
+class CD
+{
+  //Extended 'friend' declaration syntax, that avoids the 'class' keyword altogether
+  friend CA;   //Error, at the point compiler has never encountered any class by the name 'CA',
+               //whether the 'class CA' declaration follows 'class CD' or not, it is immaterial
+};
+  
+What will work ?
+
+class CA{};
+class CB{};
+//...
+
+class CD
+{
+ friend CA;   //OK, will work as the declaration of 'CA' precedes this statement or 'class CD' declaration.
+};  
+
+2) 
+
+In a traditional C++ code, it was not possible to use a typedef name for qualifying it as a friend, for eg:
+
+class MyclassCB{..};
+
+typedef MyclassCB CB;   //Now 'CB' is an alias to name to 'MyclassCB'
+
+class CD
+{
+  friend class MyclassCB;   //ok, no problem, 
+  friend class CB;  //ERROR, cannot use alias to typedef names to qualify it as a friend.
+}; 
+
+Whereas now in modern C++, with extended friend declaration syntax, we can qualify a typedef also a friend if we wish.
+
+class MyclassCB{..};
+
+typedef MyclassCB CB;   //Now 'CB' is an alias to name to 'MyclassCB'
+
+class CD
+{
+  friend MyclassCB;   //ok, no problem, 
+     (or)
+  friend CB;  //ok, can use typedef names
+}; 
+
+3) 
+
+In a traditional C++ code it is never possible to qualify a typename as a friend for eg:
+
+template<typename T1, typename T2> class CA
+{
+  //in C++98 code
+  friend class T1;    //error, cannot use typenames for qualifying it as a friend
+  friend class T2;    //error, cannot use typenames for qualifying it as a friend
+};
+
+But now, in modern C++ we can achieve the same with extended friend declaration syntax...
+
+template<typename T1, typename T2> class CA
+{
+  //in C++11 code
+  friend  T1;    //ok, can use typenames for qualifying it as a friend
+  friend  T2;    //ok, can use typenames for qualifying it as a friend
+};
+
+CA<int,float> obj1;
+
+  friend int;          //These statements will be ignored automatically as they are not class types
+  friend float;        //These statements will be ignored automatically as they are not class types
+****************************
+CA<CB,CC> obj2;
+
+   friend CB;
+   friend CC;
+*************************
+CA<CB, double> obj3;
+
+   friend CB;
+   friend double;   //will be ignored
+----------------------------------------------------------
+NESTED CLASS ACCESS RIGHTS:-
+
+    In Traditional C++, if we happen to declare one class inside of another class, then we used to call them as nested class.
+    This nesting attempt is not considered as member of the outer class, it is just scoping, instead of global scope, we happen to declare it inside another class scope...As such both the classes are independant of each other.
+    
+    for eg:
+    
+    class Outer
+    {
+      public:
+         //...
+      private:
+         //..
+      
+      class Inner
+      {
+        private:
+          //..
+        public:
+          //...
+      };
+    };
+
+  In the above declaration, the class 'Inner' is scoped inside the class 'Outer', as such the public member functions of 'Inner' cannot access the private data of the 'Outer'.
+  If there is any compulsion, that this nested class called 'Inner' must and should have access to the private 
+  members of the 'Outer' class, then we have to qualify the 'Inner' as a friend to the 'Outer'.
+
+    class Outer
+    {
+      friend class Inner;  //Now the 'Inner' can have access to the private data of 'Outer'
+      public:
+         //...
+      private:
+         //..
+      
+      class Inner
+      {
+        private:
+          //..
+        public:
+          //...
+      };
+    };
+But, now modern C++ a mere nesting of class declaration, it becomes a friend... There is nothing like we have had the friend declaration statement like in traditional C++ code.
+
+    class Outer
+    {
+      public:
+         //...
+      private:
+         //..
+      
+      class Inner     //By default this enclosed class [Inner] becomes a friend to the enclosing class [Outer]
+      {
+        private:
+          //..
+        public:
+          //...
+      };
+    };
+----------------------------------------------------------
+Tuples in C++
+A tuple is an object that can hold more than one element. These elements can be of heterogenous data types. The elements of tuples are initialized as arguments in order in which they will be accessed.
+-----------------------------
+std::optional [c++17]
+
+The class template std::optional manages an optional contained value, i.e. a value that may or may not be present. 
+
+--------------------------------------------------------------
+Memory management classes in Modern C++:-
+  - These classes employ certain C++ language features along with OO design's.
+  
+    Language features:
+        - Class templates
+        - Function overloading
+        - Operator overloading
+        - Conversion functions
+    Design features:
+        - PIMPL model
+        - RAII model
+        - Smartpointer design.
+----------------------------------------------
+The modern C++ library now supports 3 different types of memory management classes...
+
+1) unique_ptr
+2) shared_ptr
+3) weak_ptr
+
+#include<memory>
+
+Unique_ptr:
+          It is an instance that would help us hold the address of a heap instance.
+          Memory allocation request is explicitly made by the programmer, upon successful allocation this address is provided to the unique_ptr instance.
+          There upon this unique_ptr instance becomes the exclusive owner of that heap. This heap address is not allowed to be shared across different unique_ptr instance.
+          In other-words a unique_ptr instance is a move only type, it cannot be lvalue copy constructed.
+          By applying a move operation on this instance, the ownership gets transferred, at any given point of time the heap resource would be pointed to by only one unique_ptr instance.
+          
+      The de-allocation happens automatically when the unique_ptr instance perishes.
+      [The heap memory life-time is directly equal to the life-time of unique_ptr instance]
+
+template<typename T> class unique_ptr
+{
+private:
+  T* pointee;
+  void(*dl)(T*) = &default_delete<T>;  //in-class initializer feature
+public:
+    unique_ptr():pointee(nullptr){ }
+    unique_ptr(T* x):p(x){ }
+    //...
+    //...
+    auto& get_deleter()
+    {
+      return dl;
+    }
+    
+    T* get()
+    {
+      return pointee;
+    }
+    
+    unique_ptr(const unique_ptr& x)=delete;
+    unique_ptr& operator =(const unique_ptr& x)=delete;
+    
+    //move operations
+    unique_ptr(unique_ptr&& x):pointee(x.pointee)
+    {
+      x.pointee = nullptr;
+    }
+    
+    unique_ptr& operator =(unique_ptr&& x) 
+    {
+      if(pointee != nullptr)
+      {
+         delete pointee;
+      }
+       pointee=x.pointee;
+       x.pointee = nullptr;
+    }
+    
+    //..
+    operator bool(){ }
+    operator->();
+    //...
+    ~unique_ptr()
+    {
+      (*dl)(pointee);
+    }
+};
+
+template<typename T> void default_delete(T *x)
+{
+  if(p != nullptr)
+     delete p;
+}
+--------------------------------------------------------------------------------
+
+  Traditional usage:
+      int* p1 = new(nothrow) int;
+      //..
+      delete p1;
+      
+  Modern usage:
+       unique_ptr<int> p1 = make_unique<int>();   // make_unique() is C++14 function
+               (or)
+       unique_ptr<int> p2 = new int{};  //error, deprecated
+       
+       unique_ptr<int> p2 = unique_ptr<int>(new int{}); 
+       
+      
+----------------------
+When a class exhibits PIMPL model, it also a good practice to introduce a conversion function 'operator bool'.
+All memory management classes have 'operator bool' overloaded as member function.
+
+class Pointee
+{
+private:
+  int* p;
+public:
+    Pointee():p(nullptr){ }
+    Pointee(int* q):p(q){ }
+    ~Pointee()
+    {
+      if(p != nullptr)
+      {
+        delete p;
+      }
+    }
+    void operator(int* q){ p = q; }
+    
+    void print(){ cout <<"data is :" << *p << endl; }
+    
+    operator bool()
+    {
+      if(p != nullptr)
+        return true;
+      else
+        return false;
+    }
+};
+
+//***consumer code***********
+int main()
+{
+   Pointee obj1(new(nothrow) int(100));
+   //if(obj1.p != nullptr)
+   if(obj1)          // if(obj1.operator bool())
+      obj1.print();
+   else
+      //...
+   //...
+   
+   Pointee obj2;
+   //...
+   //...
+   if(obj2)
+      obj2.print();
+   else
+      //....
+return 0;
+}
+----------------------------------------
+From a unique_ptr as source to a raw_pointer as target, we can employ
+  - get() function (or)
+  - release() function of the unique_ptr class.
+
+
+From a raw_pointer as the source and a unique_ptr as the target, we can employ
+    - reset() function of unique_ptr class.
+    
+When we happen to define unique_ptr instances that should point or delegate to a custom delete handler, and the heap memory resource is incidentally being accquired with the help of make_unique function and not the 'new' operator function, then we need to use the member function called 'get_deleter' to provide the address of the custom delete handler function with respect to the unique_ptr instance.  
+---------------------------------------------------------------------------
+Why make_unique call is better than 'new' operator call ?
+
+void fun(int* p1, float* p2, double* p3)
+{
+  //...
+  delete p1;
+  delete p2;
+  delete p3;
+}
+
+int main()
+{
+     fun(new(nothrow) int, new(nothrow) float, new(nothrow) double);  //NOT SAFE, memory leaks
+             [Suc..]                [Suc..]          [Broke...]
+     //...
+}
+
+Alternate, better or modern idea...
+
+void fun(unique_ptr<int> p1, unique_ptr<float> p2, unique_ptr<double> p3)
+{
+  //...
+  
+}
+
+int main()
+{
+     fun(make_unique<int>(), make_unique<float>(), make_unique<double>());  //Very safe, no memory leaks
+             [Suc..]              [Suc..]             [Broke...]
+     //...
+}
+
+A call to make_unique will always yield a nameless 'unique_ptr' type instance
+----------------------
+unique_ptr(contd..);
+
+  - get() method of unique_ptr, extracts the raw_pointer content from the unique_ptr instance, useful or recommended only under circumstances when the heap resource owned by this unique_ptr instance should serve as a parameter to a legacy code, whose formal parameter is a raw_pointer element. Further this business plan of this legacy code is such that it wishes to only access the heap resource to carry out the desired business, as such this function is not keen acquiring ownership of this heap resource owned by the unique_ptr.
+  
+  - release() method of unique_ptr, not only extracts or provides the raw_pointer content of the unique_ptr instance, also dis-owns or transfers the ownership of the heap resource to a legacy code, taking a raw_pointer as its formal parameter, now it is the duty of this legacy code which has acquired the ownership of the heap resource to de-allocate the same at a suitable time.
+
+Note: In General the above 2 methods help us extract the raw_pointer info from an unique_ptr instance.
+
+-----------
+Normally when we have an unique_ptr instance, fetching heap memory in a modern approach would be like...
+  1) call the make_unique<> function
+     unique_ptr<IData> ptr;
+     ptr = make_unique<DataA>();
+  
+  2) call the new operator and cast the return type to a unique_ptr type
+     unique_ptr<IData> ptr;
+     //...
+     ptr = new DataA;  //error
+     ptr = unique_ptr<DataA>(new DataA);  //ok
+  3) As an application developer we wished to consume a helper member function of a legacy class code, then what ?
+  
+     template<typename T> class Factory
+     {
+     public:
+       static T* GetData()
+       {
+         return new T;
+       }
+     };
+  
+     since the above static method returns a data_type* kind, such return result cannot be directly accomodated onto a unique_ptr instance, we need cast it to a unique_ptr kind.
+     
+     unique_ptr<IData> ptr;
+     
+     ptr = Factory<DataA>::GetData();  //error, equivalent to : ptr = new DataA;
+     ptr = unique_ptr<DataA>(Factory<DataA>::GetData());
+     
+     The above statement, can be avoided with the help of 'reset' member function of unique_ptr.
+  
+      unique_ptr<IData> ptr;
+      //..
+      ptr.reset(Factory<DataA>::GetData());
+  
+  The 'reset()' has 2 overloaded forms...
+  1) reset() member function accepts a raw_pointer as input and suitabily converts this raw_pointer to the actual target type that the unique_ptr has been constructed for.
+  
+  2) A 'reset()' call without any parameter, this member function call actually helps in de-allocating the heap memory owned by him, well before the unique_ptr instance could perish.
+  
+    A scenario where a call to the 'reset()' function with no parameter of unique_ptr class would be helpful:
+    
+    Let us assume we have a function, whose life-time is very large. Within the scope of such a function a request for heap memory is quite intensive, every heap resource that is acquired, its handle is provided to distinct unique_ptr instances, as it is very safe, ensuring no memory leak or dangling pointer and even exception safe.
+    
+    Given the nature of this function being heap-intensive in its operations, if there a circumstance or situation where at a particular stage of the function execution we realize the earlier heap allocations made and owned by a few unique_ptr instances is of no more use, as the desired function or business on those heap resources have already been achieved. It would be a good-idea and under such situations, we programmers take control of the life-time of the heap instances owned by the unique_ptr handles and not wait for the unique_ptr to have its natural destruction or death,as the functions life-time is very huge. 
+  
+------------------------------
+MANAGING ARRAY TYPE INSTANCES with unique_ptr handles:-
+
+    When acquiring an array of heap instances, which are likely to be owned by a unique_ptr instance, these instances will automatically call the suitable handler functions in their destructor methods to de-allocate the array of heap resources owned by them, while they are about to perish on the stack.
+    
+    If there are problem situations where we programmers would like to take control of this de-allocation process, primarily for a reason, that we wished to accomplish some very important business just before the array of heap instances owned by the unique_ptr is about to be de-allocated, then we define our own delete-handler for the same, and further at the time of creating the unique_ptr instance we provide the custom delete-handler as a parameter, so that when the unique_ptr instance is about to perish, it would call our own custom delete-handler and not the built-in to achieve the desired goal.
+    
+    
+    template<typename T1, typename T2 = default_delete<T1>> class unique_ptr
+    {
+    public:
+       unique_ptr(T1* x, T2 x)
+       {  }
+       
+       //Expected, but does not have one for move operation
+       unique_ptr(T1&& x, T2 x)
+       { }
+    };
+  
+  
+  unique_ptr<...>  ptr2(ptr1.release(),Arr_deleter);
+  
+  unique_ptr<...>  ptr2(std::move(ptr1),Arr_deleter);  //error, suitable constructor
+---------------------------------------------------------
+Member function 'get_deleter' of unique_ptr class returns a reference to the default_delete handler data member.
+
+With the help of this member function, we can provide or assign custom delete handlers for any unique_ptr object already constructed with default_delete handlers.
+----------------------------------------------------
